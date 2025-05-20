@@ -30,7 +30,7 @@ git clone https://gitee.com/lch0821/WeChatRobot.git
 # 创建虚拟环境
 python -m venv .env
 # 激活虚拟环境
-.env\Scripts\activate
+.env\Scriptsactivate
 # 升级 pip
 python -m pip install -U pip
 # 安装必要依赖
@@ -147,7 +147,7 @@ bard: # -----bard配置这行不填-----
   # I want you to act as a spoken English teacher and improver. I will speak to you in English and you will reply to me in English to practice my spoken English. I want you to keep your reply neat, limiting the reply to 100 words. I want you to strictly correct my grammar mistakes, typos, and factual errors. I want you to ask me a question in your reply. Now let's start practicing, you could ask me a question first. Remember, I want you to strictly correct my grammar mistakes, typos, and factual errors.
   prompt: You am a large language model, trained by Google.
 
-deepseek: sk-xxxxxxxxxxxxxxx # -----deepseek配置这行不填-----
+deepseek:  # -----deepseek配置这行不填-----
   #思维链相关功能默认关闭，开启后会增加响应时间和消耗更多的token
   key:  # 填写你的 DeepSeek API Key
   api: https://api.deepseek.com  # DeepSeek API 地址
