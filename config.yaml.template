@@ -68,6 +68,7 @@ weather:  # -----天气提醒配置这行不填-----
   receivers: ["filehelper"]  # 天气提醒接收人（roomid 或者 wxid）
 
 chatgpt:  # -----chatgpt配置这行不填-----
+  enable: False  # 是否启用
   key:  # 填写你 ChatGPT 的 key
   api: https://api.openai.com/v1  # 如果你不知道这是干嘛的，就不要改
   model: gpt-3.5-turbo
@@ -75,6 +76,7 @@ chatgpt:  # -----chatgpt配置这行不填-----
   prompt: 你是智能聊天机器人，你叫 wcferry  # 根据需要对角色进行设定
 
 chatglm:  # -----chatglm配置这行不填-----
+  enable: False  # 是否启用
   key: # 这个应该不用动
   api: http://localhost:8000/v1  # 根据自己的chatglm地址修改
   proxy:  # 如果你在国内，你可能需要魔法，大概长这样：http://域名或者IP地址:端口号
@@ -82,16 +84,18 @@ chatglm:  # -----chatglm配置这行不填-----
   file_path: F:/Pictures/temp  #设定生成图片和代码使用的文件夹路径
 
 ollama:  # -----ollama配置这行不填-----
-  enable: true  # 是否启用 ollama
+  enable: False  # 是否启用
   model: deepseek-r1:1.5b # ollama-7b-sft
   prompt: 你是智能聊天机器人，你叫 梅好事  # 根据需要对角色进行设定
   file_path: d:/pictures/temp  #设定生成图片和代码使用的文件夹路径
 
 tigerbot:  # -----tigerbot配置这行不填-----
+  enable: False  # 是否启用
   key:  # key
   model:  # tigerbot-7b-sft
 
 xinghuo_web:  # -----讯飞星火web模式api配置这行不填 抓取方式详见文档：https://www.bilibili.com/read/cv27066577-----
+  enable: False  # 是否启用
   cookie:  # cookie
   fd:  # fd
   GtToken:  # GtToken
@@ -106,10 +110,12 @@ bard: # -----bard配置这行不填-----
   prompt: You am a large language model, trained by Google.
 
 zhipu:  # -----zhipu配置这行不填-----
+  enable: False  # 是否启用
   api_key:  #api key
   model:   # 模型类型
 
 deepseek:  # -----deepseek配置这行不填-----
+  enable: False  # 是否启用
   #思维链相关功能默认关闭，开启后会增加响应时间和消耗更多的token
   key:  # 填写你的 DeepSeek API Key API Key的格式为sk-xxxxxxxxxxxxxxx
   api: https://api.deepseek.com  # DeepSeek API 地址
@@ -131,7 +137,7 @@ cogview:  # -----智谱AI图像生成配置这行不填-----
 
 aliyun_image:  # -----如果要使用阿里云文生图，取消下面的注释并填写相关内容，模型到阿里云百炼找通义万相-文生图2.1-Turbo-----
   enable: true  # 是否启用阿里文生图功能，false为关闭，默认开启，如果未配置，则会将消息发送给聊天大模型
-  api_key: sk-xxxxxxxxxxxxxxxxxxxxxxxx  # 替换为你的DashScope API密钥
+  api_key:   # 替换为你的DashScope API密钥
   model: wanx2.1-t2i-turbo  # 模型名称，默认使用wanx2.1-t2i-turbo(快),wanx2.1-t2i-plus（中）,wanx-v1（慢），会给用户不同的提示！
   size: 1024*1024  # 图像尺寸，格式为宽*高
   n: 1  # 生成图像的数量

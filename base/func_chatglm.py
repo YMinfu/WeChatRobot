@@ -44,7 +44,7 @@ class ChatGLM:
     @staticmethod
     def value_check(conf: dict) -> bool:
         if conf:
-            if conf.get("api") and conf.get("prompt") and conf.get("file_path"):
+            if conf.get("key") and conf.get("api") and conf.get("prompt") and conf.get("file_path"):
                 return True
         return False
 
