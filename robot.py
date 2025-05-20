@@ -44,6 +44,8 @@ class Robot(Job):
         self.allContacts = self.getAllContacts()
         self._msg_timestamps = []
 
+        self.LOG.info(f"已选择chat_type: {chat_type}")
+
         if ChatType.is_in_chat_types(chat_type):
             if chat_type == ChatType.TIGER_BOT.value and TigerBot.value_check(self.config.TIGERBOT):
                 self.chat = TigerBot(self.config.TIGERBOT)
@@ -95,19 +97,19 @@ class Robot(Job):
         self.cogview = None
         self.aliyun_image = None
         self.gemini_image = None
-        
+
         # 初始化Gemini图像生成服务
         try:
             if hasattr(self.config, 'GEMINI_IMAGE'):
                 self.gemini_image = GeminiImage(self.config.GEMINI_IMAGE)
             else:
                 self.gemini_image = GeminiImage({})
-            
+
             if getattr(self.gemini_image, 'enable', False):
                 self.LOG.info("谷歌Gemini图像生成功能已启用")
         except Exception as e:
             self.LOG.error(f"初始化谷歌Gemini图像生成服务失败: {e}")
-        
+
         # 初始化CogView和AliyunImage服务
         if hasattr(self.config, 'COGVIEW') and self.config.COGVIEW.get('enable', False):
             try:
@@ -121,7 +123,7 @@ class Robot(Job):
                 self.LOG.info("阿里Aliyun功能已初始化")
             except Exception as e:
                 self.LOG.error(f"初始化阿里云文生图服务失败: {str(e)}")
-                
+
     @staticmethod
     def value_check(args: dict) -> bool:
         if args:
@@ -139,19 +141,24 @@ class Robot(Job):
         if service_type == 'cogview':
             if not self.cogview or not hasattr(self.config, 'COGVIEW') or not self.config.COGVIEW.get('enable', False):
                 self.LOG.info(f"收到智谱文生图请求但功能未启用: {prompt}")
-                fallback_to_chat = self.config.COGVIEW.get('fallback_to_chat', False) if hasattr(self.config, 'COGVIEW') else False
+                fallback_to_chat = self.config.COGVIEW.get('fallback_to_chat', False) if hasattr(self.config,
+                                                                                                 'COGVIEW') else False
                 if not fallback_to_chat:
-                    self.sendTextMsg("报一丝，智谱文生图功能没有开启，请联系管理员开启此功能。（可以贿赂他开启）", receiver, at_user)
+                    self.sendTextMsg("报一丝，智谱文生图功能没有开启，请联系管理员开启此功能。（可以贿赂他开启）", receiver,
+                                     at_user)
                     return True
                 return False
             service = self.cogview
             wait_message = "正在生成图像，请稍等..."
         elif service_type == 'aliyun':
-            if not self.aliyun_image or not hasattr(self.config, 'ALIYUN_IMAGE') or not self.config.ALIYUN_IMAGE.get('enable', False):
+            if not self.aliyun_image or not hasattr(self.config, 'ALIYUN_IMAGE') or not self.config.ALIYUN_IMAGE.get(
+                    'enable', False):
                 self.LOG.info(f"收到阿里文生图请求但功能未启用: {prompt}")
-                fallback_to_chat = self.config.ALIYUN_IMAGE.get('fallback_to_chat', False) if hasattr(self.config, 'ALIYUN_IMAGE') else False
+                fallback_to_chat = self.config.ALIYUN_IMAGE.get('fallback_to_chat', False) if hasattr(self.config,
+                                                                                                      'ALIYUN_IMAGE') else False
                 if not fallback_to_chat:
-                    self.sendTextMsg("报一丝，阿里文生图功能没有开启，请联系管理员开启此功能。（可以贿赂他开启）", receiver, at_user)
+                    self.sendTextMsg("报一丝，阿里文生图功能没有开启，请联系管理员开启此功能。（可以贿赂他开启）", receiver,
+                                     at_user)
                     return True
                 return False
             service = self.aliyun_image
@@ -166,24 +173,24 @@ class Robot(Job):
             if not self.gemini_image or not getattr(self.gemini_image, 'enable', False):
                 self.sendTextMsg("谷歌文生图服务未启用", receiver, at_user)
                 return True
-                
+
             service = self.gemini_image
             wait_message = "正在通过谷歌AI生成图像，请稍等..."
         else:
             self.LOG.error(f"未知的图像生成服务类型: {service_type}")
             return False
-            
+
         self.LOG.info(f"收到图像生成请求 [{service_type}]: {prompt}")
         self.sendTextMsg(wait_message, receiver, at_user)
-        
+
         image_url = service.generate_image(prompt)
-        
+
         if image_url and (image_url.startswith("http") or os.path.exists(image_url)):
             try:
                 self.LOG.info(f"开始处理图片: {image_url}")
                 # 谷歌API直接返回本地文件路径，无需下载
                 image_path = image_url if service_type == 'gemini' else service.download_image(image_url)
-                
+
                 if image_path:
                     # 创建一个临时副本，避免文件占用问题
                     temp_dir = os.path.dirname(image_path)
@@ -192,30 +199,30 @@ class Robot(Job):
                         temp_dir,
                         f"temp_{service_type}_{int(time.time())}_{random.randint(1000, 9999)}{file_ext}"
                     )
-                    
+
                     try:
                         # 创建文件副本
                         shutil.copy2(image_path, temp_copy)
                         self.LOG.info(f"创建临时副本: {temp_copy}")
-                        
+
                         # 发送临时副本
                         self.LOG.info(f"发送图片到 {receiver}: {temp_copy}")
                         self.wcf.send_image(temp_copy, receiver)
-                        
+
                         # 等待一小段时间确保微信API完成处理
                         time.sleep(1.5)
-                        
+
                     except Exception as e:
                         self.LOG.error(f"创建或发送临时副本失败: {str(e)}")
                         # 如果副本处理失败，尝试直接发送原图
                         self.LOG.info(f"尝试直接发送原图: {image_path}")
                         self.wcf.send_image(image_path, receiver)
-                    
+
                     # 安全删除文件
                     self._safe_delete_file(image_path)
                     if os.path.exists(temp_copy):
                         self._safe_delete_file(temp_copy)
-                                   
+
                 else:
                     self.LOG.warning(f"图片下载失败，发送URL链接作为备用: {image_url}")
                     self.sendTextMsg(f"图像已生成，但无法自动显示，点链接也能查看:\n{image_url}", receiver, at_user)
@@ -225,7 +232,7 @@ class Robot(Job):
         else:
             self.LOG.error(f"图像生成失败: {image_url}")
             self.sendTextMsg(f"图像生成失败: {image_url}", receiver, at_user)
-        
+
         return True
 
     def _safe_delete_file(self, file_path, max_retries=3, retry_delay=1.0):
@@ -238,7 +245,7 @@ class Robot(Job):
         """
         if not os.path.exists(file_path):
             return True
-            
+
         for attempt in range(max_retries):
             try:
                 os.remove(file_path)
@@ -250,7 +257,7 @@ class Robot(Job):
                     time.sleep(retry_delay)
                 else:
                     self.LOG.error(f"无法删除文件 {file_path} 经过 {max_retries} 次尝试: {str(e)}")
-        
+
         return False
 
     def toAt(self, msg: WxMsg) -> bool:
@@ -259,16 +266,22 @@ class Robot(Job):
         :return: 处理状态，`True` 成功，`False` 失败
         """
         # CogView触发词
-        cogview_trigger = self.config.COGVIEW.get('trigger_keyword', '牛智谱') if hasattr(self.config, 'COGVIEW') else '牛智谱'
+        cogview_trigger = self.config.COGVIEW.get('trigger_keyword', '牛智谱') if hasattr(self.config,
+                                                                                          'COGVIEW') else '牛智谱'
         # 阿里文生图触发词
-        aliyun_trigger = self.config.ALIYUN_IMAGE.get('trigger_keyword', '牛阿里') if hasattr(self.config, 'ALIYUN_IMAGE') else '牛阿里'
+        aliyun_trigger = self.config.ALIYUN_IMAGE.get('trigger_keyword', '牛阿里') if hasattr(self.config,
+                                                                                              'ALIYUN_IMAGE') else '牛阿里'
         # 谷歌AI画图触发词
-        gemini_trigger = self.config.GEMINI_IMAGE.get('trigger_keyword', '牛谷歌') if hasattr(self.config, 'GEMINI_IMAGE') else '牛谷歌'
+        gemini_trigger = self.config.GEMINI_IMAGE.get('trigger_keyword', '牛谷歌') if hasattr(self.config,
+                                                                                              'GEMINI_IMAGE') else '牛谷歌'
         # Perplexity触发词
-        perplexity_trigger = self.config.PERPLEXITY.get('trigger_keyword', 'ask') if hasattr(self.config, 'PERPLEXITY') else 'ask'
-        
+        perplexity_trigger = self.config.PERPLEXITY.get('trigger_keyword', 'ask') if hasattr(self.config,
+                                                                                             'PERPLEXITY') else 'ask'
+
         content = re.sub(r"@.*?[\u2005|\s]", "", msg.content).replace(" ", "")
-        
+
+        self.LOG.info(f"toAt(): msg = {msg}")
+
         # 阿里文生图处理
         if content.startswith(aliyun_trigger):
             prompt = content[len(aliyun_trigger):].strip()
@@ -276,7 +289,7 @@ class Robot(Job):
                 result = self.handle_image_generation('aliyun', prompt, msg.roomid, msg.sender)
                 if result:
                     return True
-                
+
         # CogView处理
         elif content.startswith(cogview_trigger):
             prompt = content[len(cogview_trigger):].strip()
@@ -284,16 +297,18 @@ class Robot(Job):
                 result = self.handle_image_generation('cogview', prompt, msg.roomid, msg.sender)
                 if result:
                     return True
-        
+
         # 谷歌AI画图处理
         elif content.startswith(gemini_trigger):
             prompt = content[len(gemini_trigger):].strip()
             if prompt:
-                return self.handle_image_generation('gemini', prompt, msg.roomid or msg.sender, msg.sender if msg.roomid else None)
+                return self.handle_image_generation('gemini', prompt, msg.roomid or msg.sender,
+                                                    msg.sender if msg.roomid else None)
             else:
-                self.sendTextMsg(f"请在{gemini_trigger}后面添加您想要生成的图像描述", msg.roomid or msg.sender, msg.sender if msg.roomid else None)
+                self.sendTextMsg(f"请在{gemini_trigger}后面添加您想要生成的图像描述", msg.roomid or msg.sender,
+                                 msg.sender if msg.roomid else None)
                 return True
-        
+
         # Perplexity处理
         elif content.startswith(perplexity_trigger):
             prompt = content[len(perplexity_trigger):].strip()
@@ -305,10 +320,11 @@ class Robot(Job):
                     else:
                         self.sendTextMsg("Perplexity服务未配置", msg.roomid, msg.sender)
                         return True
-                
+
                 # 使用现有的chat实例如果它是Perplexity
-                perplexity_instance = self.perplexity if hasattr(self, 'perplexity') else (self.chat if isinstance(self.chat, Perplexity) else None)
-                
+                perplexity_instance = self.perplexity if hasattr(self, 'perplexity') else (
+                    self.chat if isinstance(self.chat, Perplexity) else None)
+
                 if perplexity_instance:
                     self.sendTextMsg("正在查询Perplexity，请稍候...", msg.roomid, msg.sender)
                     response = perplexity_instance.get_answer(prompt, msg.roomid if msg.from_group() else msg.sender)
@@ -324,7 +340,7 @@ class Robot(Job):
             else:
                 self.sendTextMsg(f"请在{perplexity_trigger}后面添加您的问题", msg.roomid, msg.sender)
                 return True
-        
+
         return self.toChitchat(msg)
 
     def toChengyu(self, msg: WxMsg) -> bool:
@@ -335,6 +351,7 @@ class Robot(Job):
         """
         status = False
         texts = re.findall(r"^([#?？])(.*)$", msg.content)
+        # self.LOG.info(f"toChengyu(): texts = {texts}")
         # [('#', '天天向上')]
         if texts:
             flag = texts[0][0]
@@ -355,8 +372,7 @@ class Robot(Job):
         return status
 
     def toChitchat(self, msg: WxMsg) -> bool:
-        """闲聊，接入 ChatGPT
-        """
+        """闲聊，接入 ChatGPT """
         if not self.chat:  # 没接 ChatGPT，固定回复
             rsp = "你@我干嘛？"
         else:  # 接了 ChatGPT，智能回复
@@ -374,6 +390,30 @@ class Robot(Job):
             self.LOG.error(f"无法从 ChatGPT 获得答案")
             return False
 
+    def toParserPic(self, msg: WxMsg) -> bool:
+        """保存并解析图片 """
+        path = self.wcf.download_image(msg.id, msg.extra, self.config.SAVE_PIC_DIR)
+        if path:
+            return True
+        else:
+            self.LOG.error(f"下载图片失败")
+            return False
+
+    def is_Chengyu(self, msg: WxMsg) -> bool:
+        texts = re.findall(r"^([#?？])(.*)$", msg.content)
+        if texts:
+            text = texts[0][1]
+            # text是汉字
+            return True if re.findall(r"[\u4e00-\u9fa5]+", text) else False
+        return False
+
+    def is_picture(self, msg: WxMsg) -> bool:
+        return msg.type == 3
+
+    def is_video(self, msg: WxMsg) -> bool:
+        return msg.type == 43
+
+
     def processMsg(self, msg: WxMsg) -> None:
         """当接收到消息的时候，会调用本方法。如果不实现本方法，则打印原始消息。
         此处可进行自定义发送的内容,如通过 msg.content 关键字自动获取当前天气信息，并发送到对应的群组@发送者
@@ -386,17 +426,19 @@ class Robot(Job):
         # 群聊消息
         if msg.from_group():
             # 检测新人加入群聊
-            if msg.type == 10000:
-                # 使用正则表达式匹配邀请加入群聊的消息
-                new_member_match = re.search(r'"(.+?)"邀请"(.+?)"加入了群聊', msg.content)
-                if new_member_match:
-                    inviter = new_member_match.group(1)  # 邀请人
-                    new_member = new_member_match.group(2)  # 新成员
-                    # 使用配置文件中的欢迎语，支持变量替换
-                    welcome_msg = self.config.WELCOME_MSG.format(new_member=new_member, inviter=inviter)
-                    self.sendTextMsg(welcome_msg, msg.roomid, msg.sender)
-                    self.LOG.info(f"已发送欢迎消息给新成员 {new_member} 在群 {msg.roomid}")
-                    return
+            # if msg.type == 10000:
+            #     # 使用正则表达式匹配邀请加入群聊的消息
+            #     new_member_match = re.search(r'"(.+?)"邀请"(.+?)"加入了群聊', msg.content)
+            #     if new_member_match:
+            #         inviter = new_member_match.group(1)  # 邀请人
+            #         new_member = new_member_match.group(2)  # 新成员
+            #         # 使用配置文件中的欢迎语，支持变量替换
+            #         welcome_msg = self.config.WELCOME_MSG.format(new_member=new_member, inviter=inviter)
+            #         self.sendTextMsg(welcome_msg, msg.roomid, msg.sender)
+            #         self.LOG.info(f"已发送欢迎消息给新成员 {new_member} 在群 {msg.roomid}")
+            #         return
+
+            self.LOG.info(f"self.config.GROUPS: {self.config.GROUPS}, msg.roomid: {msg.roomid}")
 
             # 如果在群里被 @
             if msg.roomid not in self.config.GROUPS:  # 不在配置的响应的群列表里，忽略
@@ -404,9 +446,10 @@ class Robot(Job):
 
             if msg.is_at(self.wxid):  # 被@
                 self.toAt(msg)
-
-            else:  # 其他消息
+            elif self.is_Chengyu(msg):  # 私聊信息:  # 其他消息
                 self.toChengyu(msg)
+            elif self.is_picture(msg):
+                self.toParserPic(msg)
 
             return  # 处理完群聊信息，后面就不需要处理了
 
@@ -424,34 +467,38 @@ class Robot(Job):
                     self.LOG.info("已更新")
             else:
                 # 阿里文生图触发词处理
-                aliyun_trigger = self.config.ALIYUN_IMAGE.get('trigger_keyword', '牛阿里') if hasattr(self.config, 'ALIYUN_IMAGE') else '牛阿里'
+                aliyun_trigger = self.config.ALIYUN_IMAGE.get('trigger_keyword', '牛阿里') if hasattr(self.config,
+                                                                                                      'ALIYUN_IMAGE') else '牛阿里'
                 if msg.content.startswith(aliyun_trigger):
                     prompt = msg.content[len(aliyun_trigger):].strip()
                     if prompt:
                         result = self.handle_image_generation('aliyun', prompt, msg.sender)
                         if result:
                             return
-                
+
                 # CogView触发词处理
-                cogview_trigger = self.config.COGVIEW.get('trigger_keyword', '牛智谱') if hasattr(self.config, 'COGVIEW') else '牛智谱'
+                cogview_trigger = self.config.COGVIEW.get('trigger_keyword', '牛智谱') if hasattr(self.config,
+                                                                                                  'COGVIEW') else '牛智谱'
                 if msg.content.startswith(cogview_trigger):
                     prompt = msg.content[len(cogview_trigger):].strip()
                     if prompt:
                         result = self.handle_image_generation('cogview', prompt, msg.sender)
                         if result:
                             return
-                
+
                 # 谷歌AI画图触发词处理
-                gemini_trigger = self.config.GEMINI_IMAGE.get('trigger_keyword', '牛谷歌') if hasattr(self.config, 'GEMINI_IMAGE') else '牛谷歌'
+                gemini_trigger = self.config.GEMINI_IMAGE.get('trigger_keyword', '牛谷歌') if hasattr(self.config,
+                                                                                                      'GEMINI_IMAGE') else '牛谷歌'
                 if msg.content.startswith(gemini_trigger):
                     prompt = msg.content[len(gemini_trigger):].strip()
                     if prompt:
                         result = self.handle_image_generation('gemini', prompt, msg.sender)
                         if result:
                             return
-                
+
                 # Perplexity触发词处理
-                perplexity_trigger = self.config.PERPLEXITY.get('trigger_keyword', 'ask') if hasattr(self.config, 'PERPLEXITY') else 'ask'
+                perplexity_trigger = self.config.PERPLEXITY.get('trigger_keyword', 'ask') if hasattr(self.config,
+                                                                                                     'PERPLEXITY') else 'ask'
                 if msg.content.startswith(perplexity_trigger):
                     prompt = msg.content[len(perplexity_trigger):].strip()
                     if prompt:
@@ -462,10 +509,11 @@ class Robot(Job):
                             else:
                                 self.sendTextMsg("Perplexity服务未配置", msg.sender)
                                 return
-                        
+
                         # 使用现有的chat实例如果它是Perplexity
-                        perplexity_instance = self.perplexity if hasattr(self, 'perplexity') else (self.chat if isinstance(self.chat, Perplexity) else None)
-                        
+                        perplexity_instance = self.perplexity if hasattr(self, 'perplexity') else (
+                            self.chat if isinstance(self.chat, Perplexity) else None)
+
                         if perplexity_instance:
                             self.sendTextMsg("正在查询Perplexity，请稍候...", msg.sender)
                             response = perplexity_instance.get_answer(prompt, msg.sender)
@@ -482,7 +530,7 @@ class Robot(Job):
                         self.sendTextMsg(f"请在{perplexity_trigger}后面添加您的问题", msg.sender)
                         return
 
-                self.toChitchat(msg)  # 闲聊
+                # self.toChitchat(msg)  # 闲聊
 
     def onMsg(self, msg: WxMsg) -> int:
         try:

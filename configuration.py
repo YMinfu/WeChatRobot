@@ -48,3 +48,9 @@ class Config(object):
         self.ALIYUN_IMAGE = yconfig.get("aliyun_image", {})
         self.GEMINI_IMAGE = yconfig.get("gemini_image", {})
         self.SEND_RATE_LIMIT = yconfig.get("send_rate_limit", 0)
+
+        self.SAVE_PIC_DIR = yconfig.get("paths", {}).get("save_pic_dir")
+        if not self.SAVE_PIC_DIR:
+            self.SAVE_PIC_DIR = os.path.join(os.path.expanduser("~"), "Downloads", "WeChatPicture")
+        if not os.path.exists(self.SAVE_PIC_DIR):
+            os.makedirs(self.SAVE_PIC_DIR, exist_ok=True)

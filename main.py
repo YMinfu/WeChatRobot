@@ -23,29 +23,21 @@ def main(chat_type: int):
     robot = Robot(config, wcf, chat_type)
     robot.LOG.info(f"WeChatRobot【{__version__}】成功启动···")
 
-    # 机器人启动发送测试消息
-    robot.sendTextMsg("机器人启动成功！\n"
-                     "绘画功能使用说明：\n"
-                     "• 智谱绘画：牛智谱[描述]\n"
-                     "• 阿里绘画：牛阿里[描述]\n"
-                     "• 谷歌绘画：牛谷歌[描述]\n"
-                     "实例：\n"
-                     "牛阿里 画一张家乡\n"
-                     "@XX 牛阿里 画一张家乡\n"
-                     "聊天时直接发送消息即可", "filehelper")
-
     # 接收消息
     # robot.enableRecvMsg()     # 可能会丢消息？
     robot.enableReceivingMsg()  # 加队列
 
+    # 机器人启动发送测试消息
+    # robot.sendTextMsg("机器人启动成功！\n绘画功能使用说明：\n• 智谱绘画：牛智谱[描述]\n• 阿里绘画：牛阿里[描述]\n• 谷歌绘画：牛谷歌[描述]\n实例：\n牛阿里 画一张家乡\n@XX 牛阿里 画一张家乡\n聊天时直接发送消息即可", "filehelper")
+
     # 每天 7 点发送天气预报
-    robot.onEveryTime("07:00", robot.weatherReport)
+    # robot.onEveryTime("07:00", robot.weatherReport)
 
     # 每天 7:30 发送新闻
-    robot.onEveryTime("07:30", robot.newsReport)
+    # robot.onEveryTime("07:30", robot.newsReport)
 
     # 每天 16:30 提醒发日报周报月报
-    robot.onEveryTime("16:30", ReportReminder.remind, robot=robot)
+    # robot.onEveryTime("16:30", ReportReminder.remind, robot=robot)
 
     # 让机器人一直跑
     robot.keepRunningAndBlockProcess()
