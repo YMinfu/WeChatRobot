@@ -27,6 +27,10 @@ git clone https://gitee.com/lch0821/WeChatRobot.git
 
 4. 安装依赖
 ```sh
+# 创建虚拟环境
+python -m venv .env
+# 激活虚拟环境
+.env\Scripts\activate
 # 升级 pip
 python -m pip install -U pip
 # 安装必要依赖
